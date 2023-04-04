@@ -1,63 +1,88 @@
-import openpyxl
+import hypixel
 import time
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from bs4 import BeautifulSoup
-from selenium import webdriver
+import csv
+import sys
+import subprocess
+import os
+import webbrowser
+import ctypes
+import flask
+import openpyxl
+from flask import request, jsonify
 
-# create an instance of the webdriver
-driver = webdriver.Firefox()
+API_KEYS = ['YourAPI']
+hypixel.setKeys(API_KEYS)
 
-# Set up Firefox webdriver
-options = webdriver.FirefoxOptions()
-options.add_argument('-headless')
-firefox_driver_path = r"C:\Users\natal\Documents\Firefox driver\geckodriver.exe"
-service = Service(firefox_driver_path)
-
-# Set up Excel workbook and worksheet
 workbook = openpyxl.Workbook()
 worksheet = workbook.active
 worksheet.title = "Player Stats"
-worksheet.append(["Player", "Bedwars Stars", "Solos FKDR", "Doubles FKDR", "3v3v3v3 FKDR", "4v4v4v4 FKDR", "Overall FKDR"])
+worksheet.append(["Player", "Rank", "Level", "Stars", "Wins", "Beds", "SoloKDR", "SoloFKDR", "SoloGames", "DuoKDR", "DuoFKDR", "DuoGames", "TrioKDR", "TrioFKDR", "TrioGames", "QuadKDR", "QuadFKDR", "QuadGames", "FourKDR", "FourFKDR", "FourGames", "KDR", "FKDR", "Games"])
 
-# List of players to scrape data for
-players = ["stevenr8", "propenguin44", "gamingbookworm_4"]
+usernames = ["player1", "player2"]
 
-# Scrape data for each player
-for player in players:
-    # Construct URL for player
-    url = f"https://plancke.io/hypixel/player/stats/{player}"
-    
-    # Get web page
-    driver.get(url)
-    
-    # Wait for page to load
-    time.sleep(5)
-    
-    # Extract data
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    bedwars_stars = soup.find("div", {"data-text": "Bed Wars"}).find_all("span", {"class": "text-orange-500 font-semibold text-lg"})[0].get_text()
-    solos_fkdr = soup.find("a", {"data-mode": "BedWars: Solo"}).find("span", {"class": "font-semibold text-lg"}).get_text()
-    doubles_fkdr = soup.find("a", {"data-mode": "BedWars: Doubles"}).find("span", {"class": "font-semibold text-lg"}).get_text()
-    threes_fkdr = soup.find("a", {"data-mode": "BedWars: 3v3v3v3"}).find("span", {"class": "font-semibold text-lg"}).get_text()
-    fours_fkdr = soup.find("a", {"data-mode": "BedWars: 4v4v4v4"}).find("span", {"class": "font-semibold text-lg"}).get_text()
-    overall_fkdr = soup.find("a", {"data-mode": "Overall"}).find("span", {"class": "font-semibold text-lg"}).get_text()
-    
-    # Print data to console
-    print(f"{player}: Bedwars Stars: {bedwars_stars}, Solos FKDR: {solos_fkdr}, Doubles FKDR: {doubles_fkdr}, 3v3v3v3 FKDR: {threes_fkdr}, 4v4v4v4 FKDR: {fours_fkdr}, Overall FKDR: {overall_fkdr}")
-    
-    # Write data to Excel worksheet
-    worksheet.append([player, bedwars_stars, solos_fkdr, doubles_fkdr, threes_fkdr, fours_fkdr, overall_fkdr])
+for username in usernames:
+  Player = hypixel.Player(username)
+  print('')
+  print(Player)
 
-# Sort data in Excel worksheet by Overall FKDR column in descending order
-worksheet.sort_column = 7
-worksheet.sort_descending()
+  #HYPIXEL STATS
+  Name = Player.getName()
+  Rank = Player.getRank()['rank']
+  Level = Player.getLevel()
 
-# Save Excel workbook
+  #BEDWARS STATS
+  def getInfo(json, param):
+    try:
+      return int(json['achievements']['bedwars_level'])
+    except:
+      return 0
+  Stars = getInfo(Player.JSON, "achievements""bedwars_level")
+
+  def getInfo(json, param):
+    try:
+      return int(json['achievements']['bedwars_wins'])
+    except:
+      return 0
+  Wins = getInfo(Player.JSON, "achievements""bedwars_wins")
+
+  def getInfo(json, param):
+    try:
+      return int(json['achievements']['bedwars_beds'])
+    except:
+      return 0
+  Beds = getInfo(Player.JSON, "achievements""bedwars_beds")
+
+  def getInfo(json, param):
+    try:
+      return int(json['stats']['Bedwars'][param])
+    except:
+      return 0
+
+  SoloKDR = getInfo(Player.JSON, "eight_one_kills_bedwars")/max(getInfo(Player.JSON, "eight_one_deaths_bedwars"), 1)
+  SoloFKDR = getInfo(Player.JSON, "eight_one_final_kills_bedwars")/max(getInfo(Player.JSON, "eight_one_final_deaths_bedwars"), 1)
+  SoloGames = getInfo(Player.JSON, "eight_one_games_played_bedwars")
+  
+  DuoKDR = getInfo(Player.JSON, "eight_two_kills_bedwars")/max(getInfo(Player.JSON, "eight_two_deaths_bedwars"), 1)
+  DuoFKDR = getInfo(Player.JSON, "eight_two_final_kills_bedwars")/max(getInfo(Player.JSON, "eight_two_final_deaths_bedwars"), 1)
+  DuoGames = getInfo(Player.JSON, "eight_two_games_played_bedwars")
+
+  TrioKDR = getInfo(Player.JSON, "four_three_kills_bedwars")/max(getInfo(Player.JSON, "four_three_deaths_bedwars"), 1)
+  TrioFKDR = getInfo(Player.JSON, "four_three_final_kills_bedwars")/max(getInfo(Player.JSON, "four_three_final_deaths_bedwars"), 1)
+  TrioGames = getInfo(Player.JSON, "four_three_games_played_bedwars")
+
+  QuadKDR = getInfo(Player.JSON, "four_four_kills_bedwars")/max(getInfo(Player.JSON, "four_four_deaths_bedwars"), 1)
+  QuadFKDR = getInfo(Player.JSON, "four_four_final_kills_bedwars")/max(getInfo(Player.JSON, "four_four_final_deaths_bedwars"), 1)
+  QuadGames = getInfo(Player.JSON, "four_four_games_played_bedwars")
+
+  FourKDR = getInfo(Player.JSON, "four_two_kills_bedwars")/max(getInfo(Player.JSON, "four_two_deaths_bedwars"), 1)
+  FourFKDR = getInfo(Player.JSON, "four_two_final_kills_bedwars")/max(getInfo(Player.JSON, "four_two_final_deaths_bedwars"), 1)
+  FourGames = getInfo(Player.JSON, "four_two_games_played_bedwars")
+
+  KDR = getInfo(Player.JSON, "kills_bedwars")/max(getInfo(Player.JSON, "deaths_bedwars"), 1)
+  FKDR = getInfo(Player.JSON, "final_kills_bedwars")/max(getInfo(Player.JSON, "final_deaths_bedwars"), 1)
+  Games = getInfo(Player.JSON, "games_played_bedwars")
+
+  worksheet.append([Name, Rank, Level, Stars, Wins, Beds, SoloKDR, SoloFKDR, SoloGames, DuoKDR, DuoFKDR, DuoGames, TrioKDR, TrioFKDR, TrioGames, QuadKDR, QuadFKDR, QuadGames, FourKDR, FourFKDR, FourGames, KDR, FKDR, Games])
+
 filepath = r"C:\Users\natal\Documents\output.xlsx"  # Replace 'user' with your actual user name
 workbook.save(filepath)
-
-# Close Firefox webdriver
-driver.quit()
